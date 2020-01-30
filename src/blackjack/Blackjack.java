@@ -18,6 +18,7 @@ public class Blackjack {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        
         //Welcome player and get their name
         System.out.println("Welcome to Blackjack! Enter your name");
         Scanner sc = new Scanner(System.in);
@@ -31,22 +32,29 @@ public class Blackjack {
         //start game
         while (true) {
             //check if need a new deck
-            if(deck.checkReshuffle()){
+            if (deck.checkReshuffle()) {
                 System.out.println("Creating new deck ...");
                 deck = new Deck();
             }
-            
+
             //Ask player for bet
-            System.out.println(". You have " + player.getBank() + " credits in your bank. Place a bet to play!");
-            int bet = Integer.parseInt(sc.nextLine());
+            System.out.println(". You have " + player.getBank() + " credits in your bank.");
+            double bet = -9999;
+            while (!player.verifyBet(player, bet)) {
+                try {
+                    bet = Double.parseDouble(sc.nextLine());
+                } catch (Exception e) {
+                    System.out.println("Invalid input.");
+                }
+            }
             
             //deduct bet from players bank and create hands
-            player.makeBet(bet); 
-            Hand playerHand = new Hand(bet, deck);
+            player.makeBet(bet);
+            Hand playerHand = new Hand(deck);
             Hand dealerHand = new Hand(deck);
 
             //while < 21 or player hasn't stood or doubled down, repeat steps
-            while (playerHand.getHandValue() < 21 && !playerHand.standing() && !playerHand.doubleDown()) {
+            while (playerHand.getHandValue() < 21 && !playerHand.standing()) {
                 System.out.println("hand value: " + playerHand.getHandValue());
                 System.out.println("You have " + playerHand.getHand() + ". The dealer has " + dealerHand.revealFirstCard() + " and *****");
 
@@ -56,28 +64,26 @@ public class Blackjack {
 
                 //Validate and fulfill choice
                 String choice = sc.nextLine();
-                if (playerHand.validateChoice(choice, player) == false) {
-                    System.out.println("Invalid input. Try again");
+                if (!playerHand.validateChoice(choice, player)) {
+                    System.out.println("Invalid input. Try again.");
                 } else {
                     playerHand.fulfillChoice(choice, player, deck);
+                    //break out if a split occured
                 }
             }
-            //Check for busted, blackjack, 21 or if doubledown occured
-            boolean busted = false;
-            if (playerHand.doubleDown()) {
-                System.out.println("You double downed on " + playerHand.getHand());
-            }
+            
+            //Check for busted, blackjack, 21
             if (playerHand.getHandValue() > 21) {
-                busted = true;
+                playerHand.setBusted(true);
                 System.out.println("You busted with " + playerHand.getHand());
             } else if (playerHand.hasBlackjack()) {
                 System.out.println("BLACKJACK! " + playerHand.getHand());
             } else if (playerHand.getHandValue() == 21) {
                 System.out.println("You got 21 with " + playerHand.getHand());
-
             }
+            
             //Dealers turn. Reveal hidden card and keeping hitting until 17 or bust
-            if (!busted) {
+            if (!playerHand.hasBusted()) {
                 System.out.println("The dealer has " + dealerHand.getHand());
                 //check if player has BJ. If so only check two of the dealers card. No need to draw more
                 if (playerHand.hasBlackjack()) {
@@ -93,6 +99,7 @@ public class Blackjack {
                         dealerHand.dealersTurn(deck);
                         System.out.println("The dealer has " + dealerHand.getHand());
                     }
+                    
                     //check who won
                     if (dealerHand.getHandValue() > 21) {
                         System.out.println("The dealer busts. You win!");
@@ -109,6 +116,11 @@ public class Blackjack {
                         playerHand.returnBet(player);
                     }
                 }
+            }
+            //check players credit. Gameover if 0
+            if (player.getBank() == 0) {
+                System.out.println("Gameover");
+                break;
             }
         }
     }
