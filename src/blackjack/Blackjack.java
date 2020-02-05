@@ -18,7 +18,7 @@ public class Blackjack {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        
+
         //Welcome player and get their name
         System.out.println("Welcome to Blackjack! Enter your name");
         Scanner sc = new Scanner(System.in);
@@ -47,76 +47,103 @@ public class Blackjack {
                     System.out.println("Invalid input.");
                 }
             }
-            
+
             //deduct bet from players bank and create hands
-            player.makeBet(bet);
-            Hand playerHand = new Hand(deck);
-            Hand dealerHand = new Hand(deck);
+            Hand playerHand = new Hand(deck, player);
+            Hand dealerHand = new Hand(deck, player);
+            player.makeBet(bet, playerHand);
+            ArrayList<Hand> playerHands = new ArrayList<>();
+            playerHands.add(playerHand);
+            boolean showDealersCard = false;
+            for (int i = 0; i < playerHands.size(); i++) {
+                while (playerHands.get(i).getHandValue() < 21 && !playerHands.get(i).standing()) {
+                    //Display hands
+                    System.out.println("hand value: " + playerHands.get(i).getHandValue());
+                    System.out.println("You have " + playerHands.get(i).getHand() + ". The dealer has " + dealerHand.revealFirstCard() + " and *****");
 
-            //while < 21 or player hasn't stood or doubled down, repeat steps
-            while (playerHand.getHandValue() < 21 && !playerHand.standing()) {
-                System.out.println("hand value: " + playerHand.getHandValue());
-                System.out.println("You have " + playerHand.getHand() + ". The dealer has " + dealerHand.revealFirstCard() + " and *****");
+                    //Give the player there choices (e.g. hit, stand, split, double-down)
+                    String choices = playerHands.get(i).displayChoices(player);
+                    System.out.println(choices);
 
-                //Give the player there choices (e.g. hit, stand, split, double-down)
-                String choices = playerHand.displayChoices(player);
-                System.out.println(choices);
-
-                //Validate and fulfill choice
-                String choice = sc.nextLine();
-                if (!playerHand.validateChoice(choice, player)) {
-                    System.out.println("Invalid input. Try again.");
-                } else {
-                    playerHand.fulfillChoice(choice, player, deck);
-                    //break out if a split occured
-                }
-            }
-            
-            //Check for busted, blackjack, 21
-            if (playerHand.getHandValue() > 21) {
-                playerHand.setBusted(true);
-                System.out.println("You busted with " + playerHand.getHand());
-            } else if (playerHand.hasBlackjack()) {
-                System.out.println("BLACKJACK! " + playerHand.getHand());
-            } else if (playerHand.getHandValue() == 21) {
-                System.out.println("You got 21 with " + playerHand.getHand());
-            }
-            
-            //Dealers turn. Reveal hidden card and keeping hitting until 17 or bust
-            if (!playerHand.hasBusted()) {
-                System.out.println("The dealer has " + dealerHand.getHand());
-                //check if player has BJ. If so only check two of the dealers card. No need to draw more
-                if (playerHand.hasBlackjack()) {
-                    if (dealerHand.hasBlackjack()) {
-                        System.out.println("Push. Dealer has blackjack");
-                        playerHand.returnBet(player);
+                    //Validate and fulfill choice
+                    String choice = sc.nextLine();
+                    if (!playerHands.get(i).validateChoice(choice, player)) {
+                        System.out.println("Invalid input. Try again.");
                     } else {
-                        System.out.println("You win!");
-                        playerHand.payWinnings(player); //change to include makes odds 1.5 instead of 1:1
-                    }
-                } else {
-                    while (dealerHand.getHandValue() < 17) {
-                        dealerHand.dealersTurn(deck);
-                        System.out.println("The dealer has " + dealerHand.getHand());
-                    }
-                    
-                    //check who won
-                    if (dealerHand.getHandValue() > 21) {
-                        System.out.println("The dealer busts. You win!");
-                        playerHand.payWinnings(player);
-                    } else if (playerHand.getHandValue() > dealerHand.getHandValue()) {
-                        System.out.println("You win!");
-                        playerHand.payWinnings(player);
-                    } else if (playerHand.getHandValue() < dealerHand.getHandValue() && dealerHand.getHand().size() == 2 && dealerHand.getHandValue() == 21) {
-                        System.out.println("Dealer has blackjack. You lose.");
-                    } else if (playerHand.getHandValue() < dealerHand.getHandValue()) {
-                        System.out.println("You lose");
-                    } else if (playerHand.getHandValue() == dealerHand.getHandValue()) {
-                        System.out.println("Push");
-                        playerHand.returnBet(player);
+                        playerHands.get(i).fulfillChoice(choice, player, deck, i);
+                        if (playerHands.get(i).hasSplit()) {
+                            playerHands = playerHands.get(i).split(player, deck, playerHands, playerHands.get(i));
+                            i = 0;
+                        }
                     }
                 }
+                //check for 21 in split (quick fix), busted, bj
+                playerHands.get(i).checkHand();
+
+                //check if a hand has not busted (means we need to check dealers hand)
+                // also checking if player got blackjack straight away, dealer should not hit
+                if (!playerHands.get(i).hasBusted() && !(playerHands.get(i).hasBlackjack()
+                        && playerHands.size() == 1)) {
+                    showDealersCard = true;
+                }
             }
+            //Only show dealers card if player hasn't busted all hands
+            if (showDealersCard) {
+                //Dealers turn. Show cards and hit to 17
+                System.out.println("The dealer has " + dealerHand.getHand());
+                while (dealerHand.getHandValue() < 17) {
+                    dealerHand.dealersTurn(deck);
+                    System.out.println("The dealer has " + dealerHand.getHand());
+                }
+                //for each hand object, check who won
+                for (Hand hand : playerHands) {
+                    if (hand.hasBusted()) {
+                        System.out.println("You Busted. You lose.");
+                        hand.setHandResult(-1);
+                    } else if (dealerHand.getHandValue() > 21) {
+                        System.out.println("The dealer busts. You win!");
+                        hand.setHandResult(1);
+                    } else if (hand.getHandValue() < dealerHand.getHandValue()) {
+                        System.out.println("You lose");
+                        hand.setHandResult(-1);
+                    } else if (hand.getHandValue() > dealerHand.getHandValue()) {
+                        System.out.println("You win!");
+                        hand.setHandResult(1);
+                    } else if (!hand.hasBlackjack() && dealerHand.hasBlackjack()) { //both have 21 but dealer has BJ
+                        System.out.println("Dealer has blackjack. You lose.");
+                        hand.setHandResult(-1);
+                    } else if (hand.hasBlackjack() && !dealerHand.hasBlackjack()) {  //both have 21 but player has BJ
+                        System.out.println("You win with natural blackjack"); //I NEVER GET HERE
+                        hand.setHandResult(2);
+                    } else if (hand.hasBlackjack() && dealerHand.hasBlackjack()) { //both have blackjack
+                        System.out.println("Dealer has blackjack too. Push.");
+                        hand.setHandResult(0);
+                    } else if (hand.getHandValue() == dealerHand.getHandValue()) {
+                        System.out.println("Push");
+                        hand.setHandResult(0);
+                    }
+                } //only come here if natural blackjack
+            } else if (!playerHands.get(0).hasBusted()) { //avoid busted case. its getting in here (if all hands are busted)
+                System.out.println("The dealer has " + dealerHand.getHand());
+                for (Hand hand : playerHands) { //can replace with just indexing at 0
+
+                    if (dealerHand.hasBlackjack()) {
+                        System.out.println("Dealer has blackjack. Push");
+                        hand.setHandResult(0);
+                    } else {
+                        System.out.println("You win.");
+                        hand.setHandResult(2);
+                    }
+                }
+
+            } else if (playerHands.get(0).hasBusted()) {
+                //all hands have busted
+                
+            }
+
+            //Pay the player winnings
+            player.payWinnings(playerHands);
+
             //check players credit. Gameover if 0
             if (player.getBank() == 0) {
                 System.out.println("Gameover");
