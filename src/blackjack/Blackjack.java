@@ -87,9 +87,9 @@ public class Blackjack {
                     showDealersCard = true;
                 }
             }
-            //Only show dealers card if player hasn't busted all hands
+            //Only show dealers card if player hasn't busted all hands (need to let nat BJ in here)
             if (showDealersCard) {
-                //Dealers turn. Show cards and hit to 17
+                //Dealers turn. Show cards and hit to 17. REMOVE IF AND PUT CONDITION IN WHILE
                 System.out.println("The dealer has " + dealerHand.getHand());
                 while (dealerHand.getHandValue() < 17) {
                     dealerHand.dealersTurn(deck);
@@ -122,7 +122,7 @@ public class Blackjack {
                         System.out.println("Push");
                         hand.setHandResult(0);
                     }
-                } //only come here if natural blackjack
+                } //only come here if natural blackjack (what if all hands are busted?)
             } else if (!playerHands.get(0).hasBusted()) { //avoid busted case. its getting in here (if all hands are busted)
                 System.out.println("The dealer has " + dealerHand.getHand());
                 for (Hand hand : playerHands) { //can replace with just indexing at 0
@@ -137,7 +137,7 @@ public class Blackjack {
                 }
 
             } else if (playerHands.get(0).hasBusted()) {
-                //all hands have busted
+                //all hands have busted (work out the edge cases)
                 
             }
 
