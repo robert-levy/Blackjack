@@ -26,16 +26,16 @@ public class Blackjack {
 
         //create the deck, players hand, dealers heand and player object and ask for bet
         Player player = new Player(name, 100);
-        Deck deck = new Deck(1);
+        Deck deck = new Deck();
         System.out.println("Hello " + name);
 
         //start game
         while (true) {
             //check if need a new deck
-//            if (deck.checkReshuffle()) {
-//                System.out.println("Creating new deck ...");
-//                deck = new Deck();
-//            }
+            if (deck.checkReshuffle()) {
+                System.out.println("Creating new deck ...");
+                deck = new Deck();
+            }
 
             //Ask player for bet
             System.out.println(". You have " + player.getBank() + " credits in your bank.");
@@ -64,6 +64,8 @@ public class Blackjack {
                     System.out.println("Gameover");
                     break;
                 }
+                //reset player bets and winnings
+                player.resetBets();
                 continue;
             }
 
